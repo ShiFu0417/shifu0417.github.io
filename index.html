@@ -59,7 +59,7 @@
         
         /* Accordion transition */
         .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
-        .accordion-content.open { max-height: 2500px; transition: max-height 0.5s ease-in; }
+        .accordion-content.open { max-height: 8000px; transition: max-height 0.8s ease-in; }
         .rotate-icon { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .rotate-icon.open { transform: rotate(90deg); }
         
@@ -88,6 +88,28 @@
         .safe-top { padding-top: env(safe-area-inset-top); }
         .safe-pb-with-margin { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
         .safe-bottom-pos { bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
+
+        /* Transport Line */
+        .timeline-line {
+            position: absolute;
+            left: 23px; /* Align with icon center */
+            top: 40px;
+            bottom: -20px;
+            width: 2px;
+            background-color: #E5E5EA;
+        }
+        .dark .timeline-line { background-color: #38383A; }
+        
+        .timeline-line-dashed {
+            position: absolute;
+            left: 23px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            border-left: 2px dashed #C7C7CC;
+        }
+        .dark .timeline-line-dashed { border-left-color: #48484A; }
+
     </style>
 </head>
 <body>
@@ -102,110 +124,163 @@
         // Helper for Coords
         const c = (lat, lng) => ({lat, lng});
 
+        // Item Types: 'visit' (default), 'trans' (transport), 'flight' (flight)
         const TRIP = [
             { id:'d0', date:'1/31', wk:'週六', city:'Taipei', t:'20°', c:'Cloudy', tl:[
-                {tm:'23:00',ti:'TPE → DXB',d:'Emirates EK367 | 桃園 T2 出發 (轉機 2h 55m)',loc:'Taoyuan Airport Terminal 2', coords: c(25.079, 121.234), l:[{t:'航班狀態',u:'https://www.emirates.com/tw/chinese/manage-booking/flight-status/'}]}
+                {type: 'visit', tm:'23:00',ti:'TPE → DXB',d:'Emirates EK367 | 桃園 T2 出發 (轉機 2h 55m)',loc:'Taoyuan Airport Terminal 2', coords: c(25.079, 121.234), l:[{t:'航班狀態',u:'https://www.emirates.com/tw/chinese/manage-booking/flight-status/'}]}
             ]},
             { id:'d1', date:'2/1', wk:'週日', city:'Paris', t:'6°', c:'Rain', tl:[
-                {tm:'12:25',ti:'抵達巴黎 CDG',d:'Emirates EK073 | 抵達 Terminal 2C',loc:'CDG Airport Terminal 2C', coords: c(49.009, 2.547), desc:'出關後依照指示搭乘 RER B 線進市區。'},
-                {tm:'13:30',ti:'機場往市區',d:'RER B -> Chatelet Les Halles (€11.8)',loc:'Chatelet Les Halles', coords: c(48.862, 2.347), desc:'亦可叫 Uber/Bolt，費用約 €52-65。',l:[{t:'RATP 官網',u:'https://www.ratp.fr/en/titres-et-tarifs'}]},
-                {tm:'15:00',ti:'Check-in',d:'15 Rue des Halles. 買 Navigo Easy 卡',loc:'15 Rue des Halles', coords: c(48.860, 2.346), desc:'位於市中心的公寓，交通便利，樓下就是咖啡館。Navigo Easy 空卡 €2，可儲值 Ticket t+。',tel:'+33 1 23 45 67 89'},
-                {tm:'PM',ti:'Bastille 漫步',d:'Bastille 廣場、Village St. Paul',loc:'Place de la Bastille', coords: c(48.853, 2.369), desc:'充滿活力的區域，有許多古董店和歷史遺跡。'}
+                {type: 'visit', tm:'12:25',ti:'抵達巴黎 CDG',d:'Emirates EK073 | 抵達 Terminal 2C',loc:'CDG Airport Terminal 2C', coords: c(49.009, 2.547)},
+                {type: 'trans', mode: 'RER', ti:'機場往市區', d:'RER B: CDG -> Chatelet Les Halles', detail:'票價 €11.8 / 車程約 35-40 分鐘。亦可叫 Uber (€52-65)。', icon:'🚆'},
+                {type: 'visit', tm:'14:30',ti:'Check-in',d:'15 Rue des Halles. 買 Navigo Easy 卡 (空卡€2)',loc:'15 Rue des Halles', coords: c(48.860, 2.346), desc:'位於市中心，交通便利。'},
+                {type: 'trans', mode: 'Metro', ti:'往巴士底', d:'Metro 1號線: Chatelet -> Bastille', detail:'使用 Navigo Easy 或 Ticket t+。', icon:'🚇'},
+                {type: 'visit', tm:'PM',ti:'Bastille 漫步',d:'Bastille 廣場、Village St. Paul',loc:'Place de la Bastille', coords: c(48.853, 2.369), desc:'充滿活力的區域，有許多古董店和歷史遺跡。'}
             ]},
             { id:'d2', date:'2/2', wk:'週一', city:'Paris', t:'7°', c:'Cloudy', tl:[
-                {tm:'09:00',ti:'羅浮宮',d:'Carrousel入口進. 看蒙娜麗莎',loc:'Carrousel du Louvre', coords: c(48.862, 2.333), imp:1,desc:'世界四大博物館之首。從 Carrousel 購物中心入口進入可避開金字塔人潮。重點：Denon 館 (蒙娜麗莎, 勝利女神)。',tel:'+33 1 40 20 53 17',l:[{t:'官方購票',u:'https://www.ticketlouvre.fr/'}]},
-                {tm:'Lunch',ti:'Le Fumoir',d:'質感餐酒館',loc:'Le Fumoir Paris', coords: c(48.860, 2.340), eat:1,desc:'位於羅浮宮正對面，氛圍優雅復古，充滿書卷氣息的巴黎人氣餐廳。',menu:'鴨胸 (Magret de canard), 韃靼牛肉 (Tartare), 雞尾酒',tel:'+33 1 42 92 00 24',l:[{t:'官網菜單',u:'http://lefumoir.com/'}]},
-                {tm:'PM',ti:'歌劇院',d:'Opéra Garnier',loc:'Palais Garnier', coords: c(48.871, 2.331), desc:'加尼葉歌劇院，富麗堂皇的巴洛克建築，《歌劇魅影》的故事背景。',tel:'+33 1 71 25 24 23',l:[{t:'參觀購票',u:'https://www.operadeparis.fr/en/visits/palais-garnier'}]},
-                {tm:'Dinner',ti:'Pedra Alta',d:'必吃海鮮盤! Riz Grillé',loc:'Pedra Alta Boulogne', coords: c(48.839, 2.239), eat:1,desc:'份量驚人的葡萄牙海鮮餐廳，是巴黎CP值最高的海鮮首選。(位於 Boulogne 分店)',menu:'Riz Grillé (海鮮燉飯), Plateau Royal (皇家海鮮盤)',tel:'+33 1 46 05 15 65',l:[{t:'Tripadvisor',u:'https://www.tripadvisor.com.tw/Restaurant_Review-g1079383-d1326442-Reviews-Pedra_Alta-Boulogne_Billancourt_Hauts_de_Seine_Ile_de_France.html'}]}
+                {type: 'trans', mode: 'Metro', ti:'往羅浮宮', d:'Metro 1/7號線 -> Palais Royal-Musée du Louvre', detail:'從 Carrousel 入口進入避開人潮。', icon:'🚇'},
+                {type: 'visit', tm:'09:00',ti:'羅浮宮',d:'Carrousel入口進. 看蒙娜麗莎',loc:'Carrousel du Louvre', coords: c(48.862, 2.333), imp:1, desc:'重點：Denon 館 (蒙娜麗莎, 勝利女神)。週二休館。', l:[{t:'官方購票',u:'https://www.ticketlouvre.fr/'}]},
+                {type: 'visit', tm:'Lunch',ti:'Le Fumoir',d:'質感餐酒館 (羅浮宮對面)',loc:'Le Fumoir Paris', coords: c(48.860, 2.340), eat:1, menu:'鴨胸, 韃靼牛肉', tel:'+33 1 42 92 00 24'},
+                {type: 'trans', mode: 'Walk', ti:'步行或地鐵', d:'步行經 Tuileries 或搭地鐵往歌劇院', detail:'距離約 1.2km，步行 15 分鐘。', icon:'🚶'},
+                {type: 'visit', tm:'PM',ti:'歌劇院 (Opéra Garnier)',d:'巴洛克建築巔峰',loc:'Palais Garnier', coords: c(48.871, 2.331), desc:'《歌劇魅影》背景。參觀門票 €15。'},
+                {type: 'trans', mode: 'Metro', ti:'往晚餐', d:'Metro 9號線: Chaussée d\'Antin -> Marcel Sembat', detail:'前往 Boulogne 分店吃海鮮。', icon:'🚇'},
+                {type: 'visit', tm:'Dinner',ti:'Pedra Alta',d:'必吃海鮮盤! Riz Grillé',loc:'Pedra Alta Boulogne', coords: c(48.839, 2.239), eat:1, menu:'Riz Grillé (海鮮燉飯), Plateau Royal', tel:'+33 1 46 05 15 65'}
             ]},
             { id:'d3', date:'2/3', wk:'週二', city:'Paris', t:'5°', c:'Sunny', tl:[
-                {tm:'08:00',ti:'往凡爾賽',d:'RER C -> Versailles Château Rive Gauche',loc:'Gare de Versailles Château Rive Gauche', coords: c(48.800, 2.129), desc:'搭乘 RER C (VICK 班次) 雙層火車前往，車程約40分鐘。',l:[{t:'交通資訊',u:'https://en.chateauversailles.fr/plan-your-visit/getting-here'}]},
-                {tm:'09:00',ti:'凡爾賽宮',d:'需預約 Passport 票. 花園租球車',loc:'Palace of Versailles', coords: c(48.804, 2.120), imp:1,desc:'路易十四的奢華宮殿，Passport 票包含宮殿與花園(€25-30)。建議租高爾夫球車遊覽廣大花園。',tel:'+33 1 30 83 78 00',l:[{t:'官方購票',u:'https://ticket.chateauversailles.fr/'}]},
-                {tm:'PM',ti:'鐵塔 & 遊船',d:'Bateaux-Mouches (Pont de l\'Alma)',loc:'Bateaux-Mouches', coords: c(48.864, 2.301), desc:'搭乘塞納河遊船，從水上欣賞巴黎鐵塔與兩岸風光。碼頭位於 Pont de l\'Alma。',tel:'+33 1 42 25 96 10',l:[{t:'船票預約',u:'https://www.bateaux-mouches.fr/en'}]}
+                {type: 'trans', mode: 'RER', ti:'往凡爾賽', d:'RER C (VICK): St-Michel -> Versailles Château', detail:'車程約 40 分鐘。買來回票。', icon:'🚆'},
+                {type: 'visit', tm:'09:00',ti:'凡爾賽宮',d:'需預約 Passport 票 (宮殿+花園)',loc:'Palace of Versailles', coords: c(48.804, 2.120), imp:1, desc:'建議租高爾夫球車遊覽花園。週一休館。'},
+                {type: 'trans', mode: 'RER', ti:'返回市區', d:'RER C: Versailles -> Champ de Mars / Pont de l\'Alma', detail:'前往鐵塔與遊船碼頭。', icon:'🚆'},
+                {type: 'visit', tm:'PM',ti:'艾菲爾鐵塔 & 遊船',d:'Bateaux-Mouches (Pont de l\'Alma)',loc:'Bateaux-Mouches', coords: c(48.864, 2.301), desc:'搭乘塞納河遊船。碼頭位於 Pont de l\'Alma。'}
             ]},
             { id:'d4', date:'2/4', wk:'週三', city:'Paris', t:'6°', c:'Cloudy', tl:[
-                {tm:'AM',ti:'蒙馬特',d:'愛之牆 -> 聖心堂 -> 小丘廣場',loc:'Sacré-Cœur', coords: c(48.886, 2.343), desc:'充滿藝術氣息的山丘。路線：Abbesses站 (愛之牆) -> 纜車上山 -> 聖心堂 -> 小丘廣場 (畫家村) -> 達利達廣場 -> 紅磨坊。',tel:'+33 1 53 41 89 00',l:[{t:'聖心堂官網',u:'https://www.sacre-coeur-montmartre.com/'}]},
-                {tm:'Snack',ti:'Breizh Café',d:'法式可麗餅',loc:'Breizh Café', coords: c(48.859, 2.362), eat:1,desc:'使用布列塔尼蕎麥粉製作的正宗法式薄餅(Galette)。',menu:'Classic Jambon Fromage (火腿起司蛋), 蘋果酒 (Cidre)',tel:'+33 1 42 72 13 77',l:[{t:'官網',u:'https://www.breizhcafe.com/'}]},
-                {tm:'PM',ti:'拉佛爺百貨',d:'Gourmet館買鵝肝醬、馬卡龍',loc:'Galeries Lafayette Haussmann', coords: c(48.873, 2.332), buy:1,desc:'巴黎最著名的百貨公司，圓頂建築極美。必去對面的「Gourmet 美食館」B1 買伴手禮 (Pierre Hermé, 鵝肝醬)。',tel:'+33 1 42 82 34 56',l:[{t:'百貨官網',u:'https://haussmann.galerieslafayette.com/en/'}]},
-                {tm:'Dinner',ti:'L\'Escargot',d:'百年蝸牛餐廳',loc:'L\'Escargot Montorgueil', coords: c(48.864, 2.347), desc:'創立於1832年的金蝸牛餐廳，是體驗法式蝸牛料理的經典老店。',menu:'Escargots de Bourgogne (勃艮第蝸牛), 鴨腿',tel:'+33 1 42 36 83 51',l:[{t:'餐廳官網',u:'https://escargotmontorgueil.com/'}]}
+                {type: 'trans', mode: 'Metro', ti:'往蒙馬特', d:'Metro 12號線 -> Abbesses', detail:'出站可看愛之牆。', icon:'🚇'},
+                {type: 'visit', tm:'AM',ti:'蒙馬特散步 I',d:'愛之牆 (Wall of Love) -> 聖心堂 (Sacré-Cœur)',loc:'Sacré-Cœur', coords: c(48.886, 2.343), desc:'充滿藝術氣息的山丘，俯瞰巴黎全景。'},
+                {type: 'visit', tm:'Walk',ti:'蒙馬特散步 II',d:'小丘廣場 -> 狡兔之窟 -> 玫瑰之家',loc:'La Maison Rose', coords: c(48.888, 2.339), desc:'沿著 Rue de l’Abreuvoir 散步，經過達利達廣場 (Place Dalida)。'},
+                {type: 'visit', tm:'Walk',ti:'蒙馬特散步 III',d:'穿牆人 -> 煎餅磨坊 -> 雙風車咖啡館',loc:'Café des Deux Moulins', coords: c(48.884, 2.333), desc:'艾蜜莉的異想世界拍攝地。最後抵達紅磨坊。'},
+                {type: 'visit', tm:'Lunch',ti:'Breizh Café',d:'法式可麗餅',loc:'Breizh Café', coords: c(48.859, 2.362), eat:1, menu:'Classic Jambon Fromage, Cidre'},
+                {type: 'trans', mode: 'Metro', ti:'往百貨', d:'Metro 12號線 -> Trinité 或 步行', detail:'前往拉佛爺百貨區域。', icon:'🚇'},
+                {type: 'visit', tm:'PM',ti:'拉佛爺百貨',d:'Gourmet館買伴手禮',loc:'Galeries Lafayette Haussmann', coords: c(48.873, 2.332), buy:1, desc:'必去 Gourmet 館 B1 買 Pierre Hermé, 鵝肝醬。'},
+                {type: 'visit', tm:'Dinner',ti:'L\'Escargot Montorgueil',d:'百年蝸牛餐廳',loc:'L\'Escargot Montorgueil', coords: c(48.864, 2.347), eat:1, menu:'Escargots de Bourgogne'}
             ]},
             { id:'d5', date:'2/5', wk:'週四', city:'Malta', t:'15°', c:'Sunny', tl:[
-                {tm:'10:00',ti:'CDG → MLA',d:'EasyJet | 12:55 抵達',loc:'Malta International Airport', coords: c(35.854, 14.483), desc:'從 CDG Terminal 2B 出發。抵達馬爾他後建議使用 Bolt App 叫車前往 Sliema (約 €15-20)。',l:[{t:'EasyJet',u:'https://www.easyjet.com/'}]},
-                {tm:'14:00',ti:'Sliema Check-in',d:'47 Tigné Seafront',loc:'47 Tigné Seafront', coords: c(35.908, 14.508), desc:'位於海濱大道的公寓，擁有絕佳海景，對面就是瓦萊塔。'},
-                {tm:'PM',ti:'瓦萊塔漫步',d:'Triton Fountain, City Gate',loc:'Valletta City Gate', coords: c(35.896, 14.509), desc:'歐洲最小的首都，全城世界文化遺產。經過特里同噴泉與城門進入。'},
-                {tm:'15:30',ti:'Upper Barrakka',d:'上巴拉卡花園',loc:'Upper Barrakka Gardens', coords: c(35.895, 14.512), desc:'瓦萊塔最佳觀景點，可俯瞰大港 (Grand Harbour) 與對面的三姐妹城。有電梯可直達港口。'},
-                {tm:'16:00',ti:'聖約翰大教堂',d:'極致華麗巴洛克',loc:'St John\'s Co-Cathedral', coords: c(35.897, 14.512), imp:1,desc:'外觀樸素，內部卻金碧輝煌。必看卡拉瓦喬名畫《被斬首的聖施洗者約翰》。門票 €15，16:15 最後入場。',tel:'+356 2122 0536',l:[{t:'參觀資訊',u:'https://www.stjohnscocathedral.com/'}]}
+                {type: 'trans', mode: 'Flight', ti:'飛往馬爾他', d:'EasyJet: CDG T2B (10:00) -> MLA (12:55)', detail:'前往 CDG T2B 搭機。', icon:'✈️'},
+                {type: 'trans', mode: 'Car', ti:'機場往 Sliema', d:'Bolt / Uber', detail:'車資約 €15-20。亦可搭 Bus X2 (€2)。', icon:'🚗'},
+                {type: 'visit', tm:'14:00',ti:'Sliema Check-in',d:'47 Tigné Seafront',loc:'47 Tigné Seafront', coords: c(35.908, 14.508), desc:'海景公寓，對面即是瓦萊塔。'},
+                {type: 'trans', mode: 'Ferry', ti:'往瓦萊塔', d:'Sliema Ferry -> Valletta', detail:'票價 €1.50 (來回 €2.80)。', icon:'⛴️'},
+                {type: 'visit', tm:'PM',ti:'瓦萊塔漫步 I',d:'Triton Fountain -> City Gate -> Parliament',loc:'Valletta City Gate', coords: c(35.896, 14.509), desc:'歐洲最小首都，世界遺產。'},
+                {type: 'visit', tm:'15:30',ti:'Upper Barrakka Gardens',d:'絕美大港景觀',loc:'Upper Barrakka Gardens', coords: c(35.895, 14.512), desc:'可俯瞰三姐妹城。'},
+                {type: 'visit', tm:'16:00',ti:'聖約翰大教堂',d:'極致巴洛克',loc:'St John\'s Co-Cathedral', coords: c(35.897, 14.512), imp:1, desc:'必看卡拉瓦喬名畫。門票 €15，16:15 最後入場。'},
+                {type: 'visit', tm:'Walk',ti:'瓦萊塔漫步 II',d:'Grandmaster’s Palace -> Lower Barrakka',loc:'Grandmaster\'s Palace', coords: c(35.898, 14.513), desc:'經過 Victoria Gate，欣賞舊城區風光。'},
+                {type: 'visit', tm:'Dinner',ti:'L\'Ancora or Ta\' Kris',d:'推薦晚餐',loc:'L\'Ancora Boutique Hotel', coords: c(35.908, 14.508), eat:1}
             ]},
             { id:'d6', date:'2/6', wk:'週五', city:'Malta', t:'16°', c:'Sunny', tl:[
-                {tm:'AM',ti:'Mdina 古城',d:'權力遊戲拍攝地',loc:'Mdina Gate', coords: c(35.885, 14.403), imp:1,desc:'被稱為「寂靜之城」(Silent City)，中世紀風貌保存完整，是《權力遊戲》第一季君臨城取景地。',l:[{t:'Mdina 介紹',u:'https://www.visitmalta.com/en/a/mdina/'}]},
-                {tm:'Break',ti:'Fontanella',d:'城牆蛋糕店，風景絕佳',loc:'Fontanella Tea Garden', coords: c(35.886, 14.403), eat:1,desc:'位於 Mdina 城牆上的茶室，擁有眺望馬爾他全島的無敵視野。',menu:'經典巧克力蛋糕 (Classic Chocolate Cake), 草莓塔',tel:'+356 2145 4264',l:[{t:'Menu',u:'https://fontanellateagarden.com/'}]},
-                {tm:'PM',ti:'St. Julian\'s',d:'Balluta Bay 散步',loc:'Balluta Bay', coords: c(35.914, 14.491), desc:'熱鬧的夜生活區，擁有美麗的新哥德式教堂與海灣步道。晚餐推薦 Yana\'s 或 Tapea。'}
+                {type: 'trans', mode: 'Car', ti:'往 Mdina', d:'Uber / Bolt', detail:'約 20-30 分鐘。亦可搭公車 (202號)。', icon:'🚗'},
+                {type: 'visit', tm:'AM',ti:'Mdina 古城',d:'權力遊戲拍攝地 (寂靜之城)',loc:'Mdina Gate', coords: c(35.885, 14.403), imp:1, desc:'參觀城門、主教堂。'},
+                {type: 'visit', tm:'Break',ti:'Fontanella Tea Garden',d:'城牆蛋糕店',loc:'Fontanella Tea Garden', coords: c(35.886, 14.403), eat:1, menu:'巧克力蛋糕, 草莓塔'},
+                {type: 'trans', mode: 'Car', ti:'往 St. Julian\'s', d:'Uber / Bolt', detail:'前往海灣區。', icon:'🚗'},
+                {type: 'visit', tm:'PM',ti:'St. Julian\'s & Balluta Bay',d:'熱鬧海灣與新哥德教堂',loc:'Balluta Bay', coords: c(35.914, 14.491)},
+                {type: 'visit', tm:'Dinner',ti:'Yana\'s or Tapea',d:'推薦晚餐',loc:'Tapea', coords: c(35.912, 14.490), eat:1}
             ]},
             { id:'d7', date:'2/7', wk:'週六', city:'Malta', t:'15°', c:'Cloudy', tl:[
-                {tm:'08:45',ti:'往 Gozo 島',d:'Cirkewwa 搭渡輪',loc:'Cirkewwa Ferry Terminal', coords: c(35.987, 14.327), desc:'前往馬爾他第二大島。搭乘 Gozo Channel Line，約 25 分鐘。',tel:'+356 2210 9000',l:[{t:'渡輪時刻表',u:'https://www.gozochannel.com/ferry/schedule/'}]},
-                {tm:'AM',ti:'Victoria Citadel',d:'島中心城堡',loc:'The Citadel Victoria', coords: c(36.046, 14.239), desc:'Gozo 島的制高點要塞，可 360 度俯瞰全島景色。'},
-                {tm:'Noon',ti:'Dwejra & Inland Sea',d:'內海搭小船',loc:'Dwejra Bay', coords: c(36.052, 14.191), desc:'雖然藍窗已倒塌，但在此處搭乘小船 (€4) 穿過岩洞進入開放水域 (Inland Sea) 的體驗非常獨特。'}
+                {type: 'trans', mode: 'Bus', ti:'往碼頭', d:'Bus 222: Sliema -> Cirkewwa', detail:'車程約 1 小時。', icon:'🚌'},
+                {type: 'trans', mode: 'Ferry', ti:'往 Gozo', d:'Gozo Channel Line', detail:'船程 25 分鐘，票價 €4.65 (回程付費)。', icon:'⛴️'},
+                {type: 'visit', tm:'AM',ti:'Victoria Citadel',d:'島中心城堡',loc:'The Citadel Victoria', coords: c(36.046, 14.239), desc:'Gozo 制高點。'},
+                {type: 'trans', mode: 'Car', ti:'往 Dwejra', d:'Uber / Bolt / Bus 311', detail:'前往西海岸。', icon:'🚗'},
+                {type: 'visit', tm:'Noon',ti:'Dwejra & Inland Sea',d:'內海搭小船 (€4)',loc:'Dwejra Bay', coords: c(36.052, 14.191), desc:'藍窗遺址與內海岩洞體驗。'},
+                {type: 'trans', mode: 'Car', ti:'往神廟', d:'Uber / Bolt / Bus 302', icon:'🚗'},
+                {type: 'visit', tm:'PM',ti:'Ggantija Temples',d:'巨石神廟',loc:'Ggantija Temples', coords: c(36.047, 14.269), imp:1, desc:'比金字塔還古老的世界遺產。'},
+                {type: 'visit', tm:'Sight',ti:'Xlendi Bay',d:'海灣景色',loc:'Xlendi', coords: c(36.030, 14.217)}
             ]},
             { id:'d8', date:'2/8', wk:'週日', city:'Malta', t:'16°', c:'Sunny', tl:[
-                {tm:'AM',ti:'Marsaxlokk 魚市',d:'週日限定! 拍彩色漁船',loc:'Marsaxlokk Market', coords: c(35.841, 14.544), imp:1,desc:'傳統小漁村，週日有大型市集，販賣海鮮、紀念品。海面上停滿彩色的 Luzzu 漁船 (船頭有荷魯斯之眼)。'},
-                {tm:'Noon',ti:'藍洞',d:'搭船賞海蝕洞',loc:'Blue Grotto Malta', coords: c(35.820, 14.453), desc:'以海水湛藍聞名的海蝕洞群，天氣好時海水會發出螢光藍。船票約 €8。',l:[{t:'藍洞資訊',u:'https://www.visitmalta.com/en/a/blue-grotto/'}]},
-                {tm:'PM',ti:'三姐妹城',d:'搭水上計程車去 Vittoriosa',loc:'The Three Cities', coords: c(35.887, 14.522), desc:'與瓦萊塔對望的三座古城 (Vittoriosa, Senglea, Cospicua)。可從瓦萊塔搭水上計程車 (€2.8) 前往。'}
+                {type: 'trans', mode: 'Car', ti:'往魚市', d:'Uber / Bolt (週日市集)', detail:'前往東南部漁村。', icon:'🚗'},
+                {type: 'visit', tm:'AM',ti:'Marsaxlokk 魚市',d:'週日限定! 拍彩色漁船 Luzzu',loc:'Marsaxlokk Market', coords: c(35.841, 14.544), imp:1},
+                {type: 'trans', mode: 'Car', ti:'往藍洞', d:'Uber / Bolt', detail:'約 15 分鐘車程。', icon:'🚗'},
+                {type: 'visit', tm:'Noon',ti:'Blue Grotto (藍洞)',d:'搭船賞海蝕洞',loc:'Blue Grotto Malta', coords: c(35.820, 14.453), desc:'船票約 €8，景色絕美。'},
+                {type: 'trans', mode: 'Car', ti:'往三姐妹城', d:'Uber / Bolt', detail:'前往 Vittoriosa。', icon:'🚗'},
+                {type: 'visit', tm:'PM',ti:'三姐妹城 (Three Cities)',d:'Vittoriosa, Senglea, Cospicua',loc:'The Three Cities', coords: c(35.887, 14.522), desc:'比瓦萊塔更古老的騎士團據點。'},
+                {type: 'visit', tm:'Dinner',ti:'Rampila or Ta\' Kris',d:'瓦萊塔/Sliema 晚餐',loc:'Rampila Restaurant', coords: c(35.896, 14.508), eat:1}
             ]},
             { id:'d9', date:'2/9', wk:'週一', city:'Venice', t:'8°', c:'Rain', tl:[
-                {tm:'17:20',ti:'MLA → VCE',d:'Ryanair | 19:15 抵達',loc:'Venice Marco Polo Airport', coords: c(45.505, 12.339), l:[{t:'Ryanair',u:'https://www.ryanair.com/'}]},
-                {tm:'Trans',ti:'機場進城',d:'買 Rolling Venice Card',loc:'Venice Marco Polo Airport', coords: c(45.505, 12.339), desc:'在機場購買 Rolling Venice Card (€6, 限6-29歲)，可享 72hr ACTV 交通卡優惠價 (€27)。搭巴士進 Piazzale Roma 再轉船。',l:[{t:'Venezia Unica',u:'https://www.veneziaunica.it/en/e-commerce/services'}]},
-                {tm:'Hotel',ti:'Check-in',d:'Carnival Palace (Cannaregio區)',loc:'Carnival Palace Hotel', coords: c(45.446, 12.320), desc:'位於 Tre Archi 碼頭旁，環境清幽的高級飯店。',tel:'+39 041 244 1611'}
+                {type: 'trans', mode: 'Flight', ti:'飛往威尼斯', d:'Ryanair: MLA (17:20) -> VCE (19:15)', icon:'✈️'},
+                {type: 'trans', mode: 'Bus', ti:'機場往市區', d:'Bus: VCE -> Piazzale Roma', detail:'從機場搭巴士到羅馬廣場。', icon:'🚌'},
+                {type: 'trans', mode: 'Boat', ti:'往飯店', d:'Vaporetto (水上巴士)', detail:'買 Rolling Venice Card (€6, 29歲以下) + 3日票 (€27)。', icon:'⛴️'},
+                {type: 'visit', tm:'21:00',ti:'Check-in',d:'Carnival Palace (Cannaregio區)',loc:'Carnival Palace Hotel', coords: c(45.446, 12.320), desc:'位於 Tre Archi 碼頭旁。'},
+                {type: 'visit', tm:'Dinner',ti:'Agli Archi',d:'附近晚餐',loc:'Agli Archi Venice', coords: c(45.446, 12.321), eat:1}
             ]},
             { id:'d10', date:'2/10', wk:'週二', city:'Venice', t:'9°', c:'Cloudy', tl:[
-                {tm:'AM',ti:'里亞托橋',d:'威尼斯地標',loc:'Ponte di Rialto', coords: c(45.438, 12.335), desc:'橫跨大運河最古老的橋樑，周邊商店林立，是拍攝大運河的最佳角度。'},
-                {tm:'Sight',ti:'沉船書店',d:'貢多拉裝書',loc:'Libreria Acqua Alta', coords: c(45.437, 12.342), desc:'被譽為世界最美書店之一，用貢多拉船和浴缸裝書以防淹水。'},
-                {tm:'PM',ti:'聖馬可廣場',d:'大教堂、總督宮',loc:'Piazza San Marco', coords: c(45.434, 12.338), imp:1,desc:'拿破崙稱之為「歐洲最美的客廳」。參觀聖馬可大教堂 (金碧輝煌的馬賽克) 與總督宮 (Doge\'s Palace)。',l:[{t:'大教堂預約',u:'https://basilicasanmarco.skiperformance.com/en/store#/en/buy'},{t:'總督宮購票',u:'https://palazzoducale.visitmuve.it/en/pianifica-la-tua-visita/tickets/'}]},
-                {tm:'Break',ti:'花神咖啡',d:'世界最古老咖啡館',loc:'Caffè Florian', coords: c(45.433, 12.338), desc:'創業於1720年，裝潢華麗。室內下午茶體驗無價。',tel:'+39 041 520 5641',l:[{t:'官網',u:'https://www.caffeflorian.com/en/'}]},
-                {tm:'Shop',ti:'Despar Teatro Italia',d:'最美超市',loc:'Despar Teatro Italia', coords: c(45.442, 12.329), desc:'由古老劇院改建的超市，保留了劇院的天花板壁畫與舞台，非常特別。'}
+                {type: 'trans', mode: 'Boat', ti:'往里亞托', d:'Vaporetto Line 1/2', icon:'⛴️'},
+                {type: 'visit', tm:'AM',ti:'里亞托橋 (Rialto)',d:'威尼斯地標',loc:'Ponte di Rialto', coords: c(45.438, 12.335)},
+                {type: 'visit', tm:'Sight',ti:'沉船書店',d:'Gondola 裝書',loc:'Libreria Acqua Alta', coords: c(45.437, 12.342)},
+                {type: 'trans', mode: 'Walk', ti:'步行', d:'Walk to San Marco', icon:'🚶'},
+                {type: 'visit', tm:'PM',ti:'聖馬可廣場',d:'大教堂、總督宮、鐘樓',loc:'Piazza San Marco', coords: c(45.434, 12.338), imp:1},
+                {type: 'visit', tm:'Sight',ti:'聖馬可周邊',d:'鐘樓(Campanile) -> 摩爾人鐘塔 -> 總督宮 (Doge\'s Palace)',loc:'Campanile di San Marco', coords: c(45.434, 12.339)},
+                {type: 'visit', tm:'Sight',ti:'嘆息橋 & 花神咖啡',d:'Ponte dei Sospiri -> Caffè Florian',loc:'Bridge of Sighs', coords: c(45.434, 12.341)},
+                {type: 'trans', mode: 'Boat', ti:'往學院橋', d:'Vaporetto to Accademia', icon:'⛴️'},
+                {type: 'visit', tm:'Sight',ti:'學院橋 & 美術館',d:'Ponte dell\'Accademia -> Gallerie dell\'Accademia',loc:'Ponte dell\'Accademia', coords: c(45.431, 12.328)},
+                {type: 'visit', tm:'Shop',ti:'Despar Teatro Italia',d:'劇院改建的最美超市',loc:'Despar Teatro Italia', coords: c(45.442, 12.329), buy:1}
             ]},
             { id:'d11', date:'2/11', wk:'週三', city:'Venice', t:'8°', c:'Sunny', tl:[
-                {tm:'09:00',ti:'Murano 玻璃島',d:'搭 4.1/4.2 號船',loc:'Murano', coords: c(45.459, 12.352), desc:'以玻璃工藝聞名的小島，可參觀玻璃工廠吹製過程。',l:[{t:'水上巴士圖',u:'https://actv.avmspa.it/en/content/water-bus-service-timetable-0'}]},
-                {tm:'11:00',ti:'Burano 彩色島',d:'搭 12 號船',loc:'Burano', coords: c(45.485, 12.417), imp:1,desc:'以蕾絲工藝和色彩繽紛的房子聞名，彷彿置身童話世界。'},
-                {tm:'Dinner',ti:'Trattoria Bar Pontini',d:'海鮮義大利麵',loc:'Trattoria Bar Pontini', coords: c(45.444, 12.325), eat:1,desc:'運河邊的高人氣餐廳，海鮮新鮮，建議提前排隊。',menu:'海鮮義大利麵 (Spaghetti allo Scoglio), 墨魚麵',tel:'+39 041 714123',l:[{t:'Tripadvisor',u:'https://www.tripadvisor.com/Restaurant_Review-g187870-d2326732-Reviews-Trattoria_Bar_Pontini-Venice_Veneto.html'}]}
+                {type: 'trans', mode: 'Boat', ti:'往玻璃島', d:'Vaporetto 4.1 / 4.2 -> Murano', icon:'⛴️'},
+                {type: 'visit', tm:'09:00',ti:'Murano (玻璃島)',d:'參觀玻璃工藝',loc:'Murano', coords: c(45.459, 12.352)},
+                {type: 'trans', mode: 'Boat', ti:'往彩色島', d:'Vaporetto 12: Murano Faro -> Burano', icon:'⛴️'},
+                {type: 'visit', tm:'11:00',ti:'Burano (彩色島)',d:'繽紛房屋與蕾絲',loc:'Burano', coords: c(45.485, 12.417), imp:1},
+                {type: 'visit', tm:'Sight',ti:'Torcello',d:'最古老教堂 (可選)',loc:'Torcello', coords: c(45.498, 12.419), desc:'搭乘 9 號船從 Burano 前往。'},
+                {type: 'trans', mode: 'Boat', ti:'返回本島', d:'Vaporetto 12', icon:'⛴️'},
+                {type: 'visit', tm:'Dinner',ti:'Trattoria Bar Pontini',d:'海鮮義大利麵',loc:'Trattoria Bar Pontini', coords: c(45.444, 12.325), eat:1, menu:'海鮮麵, 墨魚麵'}
             ]},
             { id:'d12', date:'2/12', wk:'週四', city:'Florence', t:'11°', c:'Sunny', tl:[
-                {tm:'11:05',ti:'Italo 火車',d:'往 Florence (13:20抵達)',loc:'Venezia Santa Lucia', coords: c(45.441, 12.320), desc:'搭乘 Italo 8911 班次。抵達後前往 Piazza della Stazione 公寓 check-in。',l:[{t:'Italo 官網',u:'https://www.italotreno.it/en'}]},
-                {tm:'Lunch',ti:'Trattoria Zà Zà',d:'必吃丁骨牛排',loc:'Trattoria Zà Zà', coords: c(43.776, 11.253), eat:1,desc:'佛羅倫斯必吃的丁骨牛排老店，裝潢復古，份量十足。',menu:'丁骨牛排 (Bistecca alla Fiorentina) - 建議點1kg',tel:'+39 055 215411',l:[{t:'官網訂位',u:'https://www.trattoriazaza.it/'}]},
-                {tm:'PM',ti:'Fiesole 山城',d:'搭7號公車看全景',loc:'Fiesole', coords: c(43.807, 11.294), desc:'搭乘 Bus 7 (約30-40分) 前往近郊山城，可俯瞰整個托斯卡尼平原與佛羅倫斯全景，適合看夕陽。'}
+                {type: 'trans', mode: 'Train', ti:'往佛羅倫斯', d:'Italo 8911: Venezia SL (11:05) -> Firenze SMN (13:20)', icon:'🚄'},
+                {type: 'visit', tm:'Check-in',ti:'Piazza della Stazione',d:'公寓 Check-in',loc:'Piazza della Stazione 1 Firenze', coords: c(43.776, 11.248)},
+                {type: 'visit', tm:'Lunch',ti:'Trattoria Zà Zà',d:'必吃丁骨牛排',loc:'Trattoria Zà Zà', coords: c(43.776, 11.253), eat:1, menu:'Bistecca alla Fiorentina (1kg)'},
+                {type: 'trans', mode: 'Bus', ti:'往 Fiesole', d:'Bus 7', detail:'約 30-40 分鐘。', icon:'🚌'},
+                {type: 'visit', tm:'PM',ti:'Fiesole 山城',d:'俯瞰佛羅倫斯全景',loc:'Fiesole', coords: c(43.807, 11.294)}
             ]},
             { id:'d13', date:'2/13', wk:'週五', city:'Florence', t:'12°', c:'Cloudy', tl:[
-                {tm:'Lunch',ti:'Da Nerbone',d:'必吃牛肚包 (中央市場)',loc:'Mercato Centrale Firenze', coords: c(43.776, 11.253), eat:1,desc:'位於中央市場內的百年老攤，牛肚燉得軟爛入味。14:00 收攤。',menu:'牛肚包 (Lampredotto), 牛肉包 (Bollito)',l:[{t:'中央市場',u:'https://www.mercatocentrale.it/florence/'}]},
-                {tm:'PM',ti:'百花大教堂',d:'登頂需預約',loc:'Santa Maria del Fiore', coords: c(43.773, 11.255), imp:1,desc:'文藝復興的象徵，巨大的紅色圓頂。登頂需購買 Brunelleschi Pass 並預約時段。',tel:'+39 055 230 2885',l:[{t:'官方購票',u:'https://duomo.firenze.it/en/home'}]},
-                {tm:'Sight',ti:'老橋',d:'金飾店古橋',loc:'Ponte Vecchio', coords: c(43.768, 11.253), desc:'阿諾河上最古老的橋，橋上兩側都是金飾珠寶店。'}
+                {type: 'visit', tm:'Lunch',ti:'Da Nerbone',d:'中央市場牛肚包',loc:'Mercato Centrale Firenze', coords: c(43.776, 11.253), eat:1, menu:'Lampredotto, Bollito'},
+                {type: 'visit', tm:'PM',ti:'百花大教堂 (Duomo)',d:'登頂 (Brunelleschi Pass)',loc:'Santa Maria del Fiore', coords: c(43.773, 11.255), imp:1},
+                {type: 'visit', tm:'Shop',ti:'Pegna dal 1860',d:'百年雜貨行',loc:'Pegna dal 1860', coords: c(43.771, 11.256), buy:1},
+                {type: 'trans', mode: 'Walk', ti:'步行', d:'Walk to Ponte Vecchio', icon:'🚶'},
+                {type: 'visit', tm:'Sight',ti:'老橋 (Ponte Vecchio)',d:'金飾店古橋',loc:'Ponte Vecchio', coords: c(43.768, 11.253)},
+                {type: 'visit', tm:'Shop',ti:'Giunti Odeon',d:'書店電影院',loc:'Giunti Odeon', coords: c(43.771, 11.251), buy:1}
             ]},
             { id:'d14', date:'2/14', wk:'週六', city:'Florence', t:'12°', c:'Sunny', tl:[
-                {tm:'09:53',ti:'往比薩',d:'火車到 Pisa S. Rossore',loc:'Pisa San Rossore', coords: c(43.720, 10.392), desc:'搭乘區間車前往 Pisa S. Rossore 站，下車走路 5 分鐘即達斜塔 (比中央車站近)。',l:[{t:'義鐵 Trenitalia',u:'https://www.trenitalia.com/en.html'}]},
-                {tm:'AM',ti:'比薩斜塔',d:'奇蹟廣場拍照',loc:'Leaning Tower of Pisa', coords: c(43.722, 10.396), imp:1,desc:'世界七大奇景之一。登塔需寄放包包。',tel:'+39 050 835011',l:[{t:'登塔購票',u:'https://www.opapisa.it/en/tickets/buy/'}]},
-                {tm:'Dinner',ti:'Osteria Pastella',d:'車輪起司松露麵',loc:'Osteria Pastella', coords: c(43.773, 11.248), eat:1,desc:'以巨型帕瑪森起司輪現場拌炒的松露義大利麵聞名，視覺味覺雙重享受。',menu:'松露起司義大利麵 (Tagliatelle al Tartufo)',tel:'+39 055 264 5917',l:[{t:'官網',u:'https://www.osteriapastella.it/'}]}
+                {type: 'trans', mode: 'Train', ti:'往比薩', d:'Regionale: Firenze SMN (09:53) -> Pisa S. Rossore', detail:'下車步行 5 分鐘即達斜塔。', icon:'🚆'},
+                {type: 'visit', tm:'AM',ti:'比薩斜塔',d:'奇蹟廣場拍照',loc:'Leaning Tower of Pisa', coords: c(43.722, 10.396), imp:1},
+                {type: 'visit', tm:'Lunch',ti:'Cantina Vasari',d:'比薩午餐',loc:'Cantina Vasari', coords: c(43.721, 10.400), eat:1},
+                {type: 'trans', mode: 'Train', ti:'返回佛羅倫斯', d:'Regionale: Pisa -> Firenze SMN', icon:'🚆'},
+                {type: 'visit', tm:'Snack',ti:'Vivoli',d:'知名 Gelato',loc:'Vivoli', coords: c(43.769, 11.261), eat:1, menu:'Affogato'},
+                {type: 'visit', tm:'Dinner',ti:'Osteria Pastella',d:'車輪起司松露麵',loc:'Osteria Pastella', coords: c(43.773, 11.248), eat:1}
             ]},
             { id:'d15', date:'2/15', wk:'週日', city:'Rome', t:'13°', c:'Sunny', tl:[
-                {tm:'09:28',ti:'Italo 火車',d:'往 Roma Termini (11:05抵達)',loc:'Roma Termini', coords: c(41.900, 12.502), desc:'搭乘 Italo 8903 班次。抵達羅馬 Termini 車站。住宿位於西班牙廣場附近。',l:[{t:'Italo 官網',u:'https://www.italotreno.it/en'}]},
-                {tm:'Hotel',ti:'Check-in',d:'近西班牙廣場',loc:'Via dei Due Macelli 31', coords: c(41.904, 12.483), desc:'交通便利，附近是購物精華區。',tel:'+39 06 679 4223'},
-                {tm:'Snack',ti:'Pompi Tiramisù',d:'必吃提拉米蘇',loc:'Pompi Tiramisù', coords: c(41.904, 12.480), eat:1,desc:'羅馬著名的提拉米蘇專賣店，口味選擇多，推薦經典原味或草莓。',menu:'經典提拉米蘇, 草莓提拉米蘇',tel:'+39 06 6880 1779',l:[{t:'官網',u:'https://barpompi.it/'}]}
+                {type: 'trans', mode: 'Train', ti:'往羅馬', d:'Italo 8903: Firenze SMN (09:28) -> Roma Termini (11:05)', icon:'🚄'},
+                {type: 'trans', mode: 'Metro', ti:'往飯店', d:'Metro A: Termini -> Barberini/Spagna', detail:'購買 BIT 單程票 (€1.5) 或 Multi-BIT。', icon:'🚇'},
+                {type: 'visit', tm:'Check-in',ti:'Spagna Apt',d:'近西班牙廣場',loc:'Via dei Due Macelli 31', coords: c(41.904, 12.483)},
+                {type: 'visit', tm:'Snack',ti:'Pompi Tiramisù',d:'必吃提拉米蘇',loc:'Pompi Tiramisù', coords: c(41.904, 12.480), eat:1},
+                {type: 'visit', tm:'PM',ti:'西班牙廣場',d:'羅馬假期場景',loc:'Piazza di Spagna', coords: c(41.905, 12.482), imp:1},
+                {type: 'visit', tm:'Dinner',ti:'Dar Bruttone',d:'羅馬風味晚餐',loc:'Dar Bruttone', coords: c(41.884, 12.503), eat:1}
             ]},
             { id:'d16', date:'2/16', wk:'週一', city:'Rome', t:'14°', c:'Sunny', tl:[
-                {tm:'13:20',ti:'羅馬競技場',d:'預約 Arena Floor',loc:'Colosseum', coords: c(41.890, 12.492), imp:1,desc:'古羅馬帝國的象徵。已預約 13:20 Arena Floor (競技場平臺) 門票，可進入中心感受角鬥士視角。',tel:'+39 06 3996 7700',l:[{t:'官方購票',u:'https://www.coopculture.it/en/products/ticket-colosseum-roman-forum-palatine_24h/'}]},
-                {tm:'PM',ti:'許願池',d:'Fontana di Trevi',loc:'Trevi Fountain', coords: c(41.900, 12.483), imp:1,desc:'羅馬最大的巴洛克風格噴泉，傳說背對噴泉投擲硬幣可重返羅馬。'},
-                {tm:'Dinner',ti:'CiPASSO',d:'高人氣餐廳',loc:'CiPASSO Vineria Bistrot', coords: c(41.900, 12.470), desc:'氣氛極佳的現代義式餐酒館，料理精緻，服務親切。',menu:'章魚腳 (Octopus), 羅馬培根蛋麵 (Carbonara)',tel:'+39 06 6889 2620',l:[{t:'官網訂位',u:'https://www.cipasso.com/'}]}
+                {type: 'trans', mode: 'Metro', ti:'往競技場', d:'Metro B: Termini -> Colosseo', icon:'🚇'},
+                {type: 'visit', tm:'13:20',ti:'羅馬競技場',d:'預約 Arena Floor',loc:'Colosseum', coords: c(41.890, 12.492), imp:1, desc:'進入中心感受角鬥士視角。包含古羅馬廣場 (Foro Romano)。'},
+                {type: 'trans', mode: 'Bus', ti:'往許願池', d:'Bus / Walk', icon:'🚌'},
+                {type: 'visit', tm:'PM',ti:'許願池 (Fontana di Trevi)',d:'丟硬幣許願',loc:'Trevi Fountain', coords: c(41.900, 12.483), imp:1},
+                {type: 'visit', tm:'Dinner',ti:'CiPASSO',d:'高人氣餐酒館',loc:'CiPASSO Vineria Bistrot', coords: c(41.900, 12.470), eat:1, menu:'Carbonara, Octopus'}
             ]},
             { id:'d17', date:'2/17', wk:'週二', city:'Rome', t:'14°', c:'Cloudy', tl:[
-                {tm:'14:00',ti:'梵蒂岡博物館',d:'西斯汀禮拜堂',loc:'Vatican Museums', coords: c(41.906, 12.453), imp:1,desc:'世界最偉大的博物館之一，已預約 14:00。必看米開朗基羅的《創世紀》與《最後的審判》。',tel:'+39 06 6988 4676',l:[{t:'官方購票',u:'https://tickets.museivaticani.va/home'}]},
-                {tm:'16:30',ti:'聖彼得大教堂',d:'世界最大教堂',loc:'St. Peter\'s Basilica', coords: c(41.902, 12.454), desc:'天主教的中心，內部宏偉莊嚴，有米開朗基羅的《聖殤》。'},
-                {tm:'18:00',ti:'聖天使堡',d:'Castel Sant\'Angelo',loc:'Castel Sant\'Angelo', coords: c(41.903, 12.466), desc:'原為哈德良皇帝陵寢，後改為城堡。從聖天使橋拍攝城堡是經典角度。'},
-                {tm:'Coffee',ti:'金杯咖啡',d:'必喝 Coffee Granita',loc:'Tazza d\'Oro', coords: c(41.899, 12.476), eat:1,desc:'萬神殿旁的老字號咖啡店，被譽為全羅馬最好喝的咖啡。',menu:'咖啡冰沙 (Granita di Caffè)',tel:'+39 06 678 9792',l:[{t:'官網',u:'https://www.tazzadorocoffeeshop.com/'}]}
+                {type: 'trans', mode: 'Metro', ti:'往梵蒂岡', d:'Metro A -> Ottaviano', icon:'🚇'},
+                {type: 'visit', tm:'14:00',ti:'梵蒂岡博物館',d:'西斯汀禮拜堂',loc:'Vatican Museums', coords: c(41.906, 12.453), imp:1},
+                {type: 'visit', tm:'16:30',ti:'聖彼得大教堂',d:'世界最大教堂',loc:'St. Peter\'s Basilica', coords: c(41.902, 12.454)},
+                {type: 'visit', tm:'18:00',ti:'聖天使堡',d:'拍攝天使橋',loc:'Castel Sant\'Angelo', coords: c(41.903, 12.466)},
+                {type: 'visit', tm:'Sight',ti:'納沃納廣場 (Piazza Navona)',d:'四河噴泉',loc:'Piazza Navona', coords: c(41.899, 12.473)},
+                {type: 'visit', tm:'Sight',ti:'萬神殿 (Pantheon)',d:'羅馬穹頂',loc:'Pantheon', coords: c(41.898, 12.476)},
+                {type: 'visit', tm:'Coffee',ti:'金杯咖啡 (Tazza d\'Oro)',d:'萬神殿旁必喝',loc:'Tazza d\'Oro', coords: c(41.899, 12.476), eat:1, menu:'Coffee Granita'}
             ]},
             { id:'d18', date:'2/18', wk:'週三', city:'Rome', t:'13°', c:'Rain', tl:[
-                {tm:'Lunch',ti:'Piccolo Buco',d:'超人氣 Pizza',loc:'Piccolo Buco', coords: c(41.900, 12.483), eat:1,desc:'許願池旁排隊名店，以長時間發酵的餅皮聞名。',menu:'瑪格麗特披薩, 黃色番茄披薩',tel:'+39 06 6938 0163',l:[{t:'官網',u:'https://www.pizzeriapiccolobuco.it/'}]},
-                {tm:'17:00',ti:'機場快線',d:'Termini -> FCO 機場',loc:'Fiumicino Airport', coords: c(41.799, 12.246), desc:'搭乘 Leonardo Express 直達機場 (約 €14, 32分鐘)。',l:[{t:'Leonardo Express',u:'https://www.trenitalia.com/en/services/leonardo-express.html'}]},
-                {tm:'20:50',ti:'FCO → DXB',d:'Emirates 返程',loc:'Fiumicino Airport Terminal 3', coords: c(41.793, 12.251), l:[{t:'Emirates',u:'https://www.emirates.com/'}]}
+                {type: 'visit', tm:'Lunch',ti:'Rome Supplì & Piccolo Buco',d:'炸飯糰與超人氣 Pizza',loc:'Piccolo Buco', coords: c(41.900, 12.483), eat:1},
+                {type: 'trans', mode: 'Train', ti:'往機場', d:'Leonardo Express: Termini -> FCO', detail:'票價 €14，車程 32 分鐘。', icon:'🚄'},
+                {type: 'visit', tm:'20:50',ti:'FCO → DXB',d:'Emirates 返程',loc:'Fiumicino Airport Terminal 3', coords: c(41.793, 12.251), l:[{t:'Emirates',u:'https://www.emirates.com/'}]}
             ]},
             { id:'d19', date:'2/19', wk:'週四', city:'Taipei', t:'21°', c:'Cloudy', tl:[
-                {tm:'20:40',ti:'抵達台北',d:'旅程結束！',loc:'Taoyuan Airport', coords: c(25.079, 121.234)}
+                {type: 'visit', tm:'20:40',ti:'抵達台北',d:'旅程結束！',loc:'Taoyuan Airport', coords: c(25.079, 121.234)}
             ]}
         ];
 
@@ -340,7 +415,10 @@
                 
                 let itineraryContext = "No specific itinerary data found for today.";
                 if (todayItinerary && todayItinerary.tl) {
-                    itineraryContext = todayItinerary.tl.map(item => `- ${item.tm} ${item.ti}: ${item.d} (Location: ${item.loc})`).join('\n');
+                    itineraryContext = todayItinerary.tl
+                        .filter(item => item.type === 'visit')
+                        .map(item => `- ${item.tm || ''} ${item.ti}: ${item.d} (Location: ${item.loc})`)
+                        .join('\n');
                 }
 
                 let gpsContext = "User GPS location is unknown.";
@@ -595,7 +673,7 @@
                     {TRIP.map(d => (
                         <div id={d.id} key={d.id} className={`bg-white dark:bg-[#1C1C1E] rounded-[22px] shadow-sm overflow-hidden transition-all duration-300 ${expandedDayId === d.id ? 'ring-2 ring-[#007AFF] ring-offset-2 ring-offset-[#F2F2F7] dark:ring-offset-black' : ''}`}>
                             <div onClick={() => toggleDay(d.id)} className="active:bg-gray-50 dark:active:bg-[#2C2C2E] transition-colors cursor-pointer p-5 flex justify-between items-center"><div className="flex items-center gap-4"><div className="flex flex-col"><span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{d.date} · {d.wk}</span><h2 className="text-[22px] font-bold dark:text-white leading-tight">{d.city}</h2></div><button onClick={(e) => openWeather(d.city, e)} className="flex items-center gap-1.5 bg-gray-100 dark:bg-[#2C2C2E] px-3 py-1.5 rounded-full transition-colors hover:bg-gray-200 dark:hover:bg-[#3A3A3C]"><span className="text-[13px]">{getWeatherText(d.c === 'Sunny' ? 0 : d.c === 'Rain' ? 61 : 3, true).icon}</span><span className="text-[13px] font-semibold text-gray-600 dark:text-gray-300">{d.t}</span></button></div><div className={`rotate-icon ${expandedDayId === d.id ? 'open' : ''} w-8 h-8 bg-gray-100 dark:bg-[#2C2C2E] rounded-full flex items-center justify-center text-gray-500`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg></div></div>
-                            <div className={`accordion-content ${expandedDayId === d.id ? 'open' : ''}`}><div className="px-5 pb-5"><div className="border-t border-gray-100 dark:border-gray-800 pt-2">{d.tl.map((e, idx) => (<TimelineItem key={idx} e={e} isLast={idx === d.tl.length - 1} embedMap={true} userLocation={userLocation} />))}</div></div></div>
+                            <div className={`accordion-content ${expandedDayId === d.id ? 'open' : ''}`}><div className="px-5 pb-5"><div className="border-t border-gray-100 dark:border-gray-800 pt-2 relative">{d.tl.map((e, idx) => (<TimelineItem key={idx} e={e} isLast={idx === d.tl.length - 1} embedMap={true} userLocation={userLocation} />))}</div></div></div>
                         </div>
                     ))}
                     <div className="text-center py-8 text-gray-400 text-[13px] font-medium">✈️ 旅程結束</div>
@@ -610,18 +688,52 @@
                 distance = dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`;
             }
 
-            return (
-                <div className="py-5 relative">
-                    <div className="flex gap-4"><div className="w-12 shrink-0 text-right pt-1"><span className="text-[13px] font-semibold text-gray-400 tabular-nums">{e.tm}</span></div><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className={`text-[17px] font-bold leading-snug pr-2 ${e.eat?'text-[#FF9500]':e.imp?'text-[#007AFF]':e.buy?'text-[#AF52DE]':'dark:text-white'}`}>{e.ti}</h4>{e.loc && <a href={`https://maps.google.com/?q=${encodeURIComponent(e.loc)}`} target="_blank" rel="noreferrer" onClick={(ev) => ev.stopPropagation()} className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0 text-[#007AFF] hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></a>}</div><p className="text-[15px] text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">{e.d}</p>
-                    
-                    {distance && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100 dark:bg-[#3A3A3C] text-[12px] font-medium text-gray-500 dark:text-gray-400">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            距離 {distance}
+            // Transport Block
+            if (e.type === 'trans') {
+                return (
+                    <div className="py-2 relative pl-8">
+                         {!isLast && <div className="timeline-line-dashed"></div>}
+                        <div className="flex gap-4 items-center">
+                            <div className="absolute left-[13px] w-6 h-6 rounded-full bg-gray-100 dark:bg-[#2C2C2E] border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[12px] z-10">{e.icon || '🚗'}</div>
+                            <div className="flex-1 min-w-0 bg-gray-50 dark:bg-[#2C2C2E]/50 rounded-xl px-4 py-3 border border-dashed border-gray-200 dark:border-gray-700">
+                                <div className="flex justify-between items-start">
+                                    <h4 className="text-[15px] font-bold text-gray-700 dark:text-gray-200">{e.ti}</h4>
+                                    <span className="text-[11px] font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded uppercase tracking-wide">{e.mode}</span>
+                                </div>
+                                <div className="text-[13px] font-medium text-gray-800 dark:text-gray-200 mt-1">{e.d}</div>
+                                {e.detail && <div className="text-[12px] text-gray-500 mt-1 leading-relaxed">{e.detail}</div>}
+                            </div>
                         </div>
-                    )}
+                    </div>
+                );
+            }
 
-                    {(e.desc || e.menu || e.tel || e.l || (embedMap && e.loc)) && (<div className="mt-4 bg-gray-50 dark:bg-[#2C2C2E] rounded-[16px] p-3.5 text-[14px] space-y-3 border border-transparent dark:border-white/5">{e.desc && <div className="text-gray-600 dark:text-gray-300 leading-relaxed">{e.desc}</div>}{e.menu && <div className="flex gap-2.5 items-start"><span className="text-[#FF9500] shrink-0 text-[16px]">🍽️</span><span className="text-gray-700 dark:text-gray-200 font-medium">{e.menu}</span></div>}{e.tel && <div className="flex gap-2.5 items-center"><span className="text-[#30D158] shrink-0 text-[16px]">📞</span><a href={`tel:${e.tel}`} className="text-[#007AFF] font-medium hover:underline">{e.tel}</a></div>}{e.l && <div className="flex flex-wrap gap-2 pt-1">{e.l.map((link, i) => <a key={i} href={link.u} target="_blank" rel="noreferrer" className="text-[13px] px-3 py-1.5 rounded-lg bg-white dark:bg-[#3A3A3C] border border-gray-200 dark:border-transparent dark:text-gray-200 flex items-center gap-1.5 font-medium shadow-sm active:scale-95 transition-all">🔗 {link.t}</a>)}</div>}{embedMap && e.loc && (e.imp || e.eat || e.buy || e.tm.includes(':')) && (<div className="pt-2 rounded-[12px] overflow-hidden"><iframe className="map-frame w-full h-[150px] border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=${encodeURIComponent(e.loc)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}></iframe></div>)}</div>)}</div></div>{!isLast && <div className="absolute bottom-0 right-0 w-[calc(100%-64px)] h-[0.5px] bg-gray-200 dark:bg-gray-700/50"></div>}
+            // Normal Visit Block
+            return (
+                <div className="py-5 relative pl-4">
+                     {!isLast && <div className="timeline-line"></div>}
+                    <div className="flex gap-4 relative">
+                        {/* Time Column */}
+                        <div className="w-12 shrink-0 text-right pt-1 relative z-10">
+                            <span className="text-[13px] font-semibold text-gray-400 tabular-nums">{e.tm}</span>
+                        </div>
+                        
+                        {/* Content Column */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                                <h4 className={`text-[17px] font-bold leading-snug pr-2 ${e.eat?'text-[#FF9500]':e.imp?'text-[#007AFF]':e.buy?'text-[#AF52DE]':'dark:text-white'}`}>{e.ti}</h4>
+                                {e.loc && <a href={`https://maps.google.com/?q=${encodeURIComponent(e.loc)}`} target="_blank" rel="noreferrer" onClick={(ev) => ev.stopPropagation()} className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0 text-[#007AFF] hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></a>}
+                            </div>
+                            <p className="text-[15px] text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">{e.d}</p>
+                            
+                            {distance && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100 dark:bg-[#3A3A3C] text-[12px] font-medium text-gray-500 dark:text-gray-400">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                                    距離 {distance}
+                                </div>
+                            )}
+
+                            {(e.desc || e.menu || e.tel || e.l || (embedMap && e.loc)) && (<div className="mt-4 bg-gray-50 dark:bg-[#2C2C2E] rounded-[16px] p-3.5 text-[14px] space-y-3 border border-transparent dark:border-white/5">{e.desc && <div className="text-gray-600 dark:text-gray-300 leading-relaxed">{e.desc}</div>}{e.menu && <div className="flex gap-2.5 items-start"><span className="text-[#FF9500] shrink-0 text-[16px]">🍽️</span><span className="text-gray-700 dark:text-gray-200 font-medium">{e.menu}</span></div>}{e.tel && <div className="flex gap-2.5 items-center"><span className="text-[#30D158] shrink-0 text-[16px]">📞</span><a href={`tel:${e.tel}`} className="text-[#007AFF] font-medium hover:underline">{e.tel}</a></div>}{e.l && <div className="flex flex-wrap gap-2 pt-1">{e.l.map((link, i) => <a key={i} href={link.u} target="_blank" rel="noreferrer" className="text-[13px] px-3 py-1.5 rounded-lg bg-white dark:bg-[#3A3A3C] border border-gray-200 dark:border-transparent dark:text-gray-200 flex items-center gap-1.5 font-medium shadow-sm active:scale-95 transition-all">🔗 {link.t}</a>)}</div>}{embedMap && e.loc && (e.imp || e.eat || e.buy || e.tm.includes(':')) && (<div className="pt-2 rounded-[12px] overflow-hidden"><iframe className="map-frame w-full h-[150px] border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=${encodeURIComponent(e.loc)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}></iframe></div>)}</div>)}</div></div>{!isLast && <div className="absolute bottom-0 right-0 w-[calc(100%-64px)] h-[0.5px] bg-gray-200 dark:bg-gray-700/50"></div>}
                 </div>
             );
         }
@@ -667,11 +779,11 @@
                     ) : hasTodayData ? (
                         <>
                             <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-2 mb-5"><span className="text-[11px] font-bold bg-[#AF52DE]/10 text-[#AF52DE] px-2 py-0.5 rounded">TODAY</span><span className="text-[13px] text-gray-400 font-medium">{todayStr} · {currentCity}</span></div><div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-headings:text-black dark:prose-headings:text-white leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideGeneral) }}></div></div>
-                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center text-xl">🚂</div><h3 className="text-[17px] font-bold dark:text-white">交通攻略</h3></div>
+                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-xl">🚂</div><h3 className="text-[17px] font-bold dark:text-white">交通攻略</h3></div>
                             {userLocation ? <div className="text-[12px] text-[#007AFF] bg-blue-50 dark:bg-blue-500/10 px-3 py-2 rounded-lg mb-4 flex items-center gap-2"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>已根據您的 GPS 位置優化路線</div> : null}
                             <div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideTransport) }}></div></div>
-                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/20 flex items-center justify-center text-xl">🍽️</div><h3 className="text-[17px] font-bold dark:text-white">必吃清單</h3></div><div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideEat) }}></div></div>
-                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-500/20 flex items-center justify-center text-xl">🛍️</div><h3 className="text-[17px] font-bold dark:text-white">必買清單</h3></div><div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideShopping) }}></div></div>
+                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-xl">🍽️</div><h3 className="text-[17px] font-bold dark:text-white">必吃清單</h3></div><div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideEat) }}></div></div>
+                            <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-6 shadow-sm border border-transparent dark:border-white/5"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-xl">🛍️</div><h3 className="text-[17px] font-bold dark:text-white">必買清單</h3></div><div className="prose dark:prose-invert prose-sm max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 leading-7" dangerouslySetInnerHTML={{ __html: marked.parse(guideShopping) }}></div></div>
                         </>
                     ) : (
                         <div id="ai-loading-state" className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-10 text-center shadow-sm"><div className="animate-spin h-8 w-8 border-4 border-[#AF52DE] border-t-transparent rounded-full mx-auto mb-5"></div><p className="text-gray-500 dark:text-gray-400 text-[15px]">正在獲取 GPS 並分析今日行程...</p></div>
